@@ -3,7 +3,6 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -114,6 +113,7 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     mapping(uint256 => uint256) public reviewByJob; // jobId => reviewId (0 = none)
     mapping(address => uint256) public activeJobCount;
     mapping(address => uint256) public maxActiveJobs;
+    mapping(address => bool) public hasExpressedInterest; // one pitch per address
 
     // -------------------------------------------------------------------------
     // Events
@@ -135,6 +135,7 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     event ReviewSubmitted(uint256 indexed reviewId, uint256 indexed jobId, uint8 stars);
     event ReviewResponded(uint256 indexed reviewId);
     event SellerInterestExpressed(uint256 indexed id, address indexed wallet);
+    event Payout(uint256 indexed jobId, uint256 sellerAmount, uint256 burnAmount, uint256 treasuryAmount);
     event TreasuryChangeProposed(address indexed newTreasury, uint256 executeAt);
     event TreasuryChanged(address indexed newTreasury);
     event MarketplaceOpenChanged(bool open);
@@ -434,7 +435,9 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
 
     function expressSellerInterest(string calldata pitchIpfsHash) external returns (uint256) {
         require(bytes(pitchIpfsHash).length > 0, "hash empty");
+        require(!hasExpressedInterest[msg.sender], "already expressed interest");
 
+        hasExpressedInterest[msg.sender] = true;
         sellerInterestCount += 1;
         uint256 id = sellerInterestCount;
 
@@ -511,6 +514,7 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         clawd.safeTransfer(j.seller, sellerAmount);
         clawd.safeTransfer(BURN_ADDRESS, burnAmount);
         clawd.safeTransfer(treasury, treasuryAmount);
+        emit Payout(jobId, sellerAmount, burnAmount, treasuryAmount);
     }
 
     function _refund(uint256 jobId) internal {
