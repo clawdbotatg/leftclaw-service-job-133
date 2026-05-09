@@ -1,74 +1,81 @@
 "use client";
 
 import Link from "next/link";
-import { Address } from "@scaffold-ui/components";
+import { ListingsGrid } from "./_components/ListingsGrid";
 import type { NextPage } from "next";
-import { useAccount } from "wagmi";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { useTargetNetwork } from "~~/hooks/scaffold-eth";
 
 const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
-  const { targetNetwork } = useTargetNetwork();
-
   return (
-    <>
-      <div className="flex items-center flex-col grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
-          </h1>
-          <div className="flex justify-center items-center space-x-2 flex-col">
-            <p className="my-2 font-medium">Connected Address:</p>
-            <Address address={connectedAddress} chain={targetNetwork} />
-          </div>
-
-          <p className="text-center text-lg">
-            Get started by editing{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/nextjs/app/page.tsx
-            </code>
-          </p>
-          <p className="text-center text-lg">
-            Edit your smart contract{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              YourContract.sol
-            </code>{" "}
-            in{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/hardhat/contracts
-            </code>
-          </p>
-        </div>
-
-        <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col md:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contracts
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
+    <div className="flex flex-col grow">
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-base-300 bg-base-100">
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 opacity-30"
+          style={{
+            backgroundImage:
+              "radial-gradient(60% 60% at 20% 0%, rgba(0,229,255,0.18) 0%, transparent 60%), radial-gradient(60% 60% at 90% 30%, rgba(181,97,255,0.18) 0%, transparent 60%)",
+          }}
+        />
+        <div className="max-w-7xl mx-auto px-6 pt-16 pb-12 lg:pt-24 lg:pb-20">
+          <div className="max-w-3xl">
+            <span className="cw-badge bg-primary/10 text-primary border border-primary/30">
+              <span className="size-1.5 rounded-full bg-primary" />
+              Live on Base
+            </span>
+            <h1 className="mt-5 text-5xl lg:text-6xl font-bold tracking-tight">
+              <span className="cw-gradient-text">Onchain services,</span>
+              <br />
+              sharpened.
+            </h1>
+            <p className="mt-5 text-lg text-base-content/70 max-w-xl">
+              A CLAWD-native marketplace. Pay once, escrow until delivered, and every transaction sharpens the
+              ecosystem.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="#listings" className="btn btn-primary">
+                Browse listings
+              </Link>
+              <Link href="/how-it-works" className="btn btn-ghost border border-base-300">
+                How it works
+              </Link>
             </div>
           </div>
         </div>
-      </div>
-    </>
+        <div className="cw-strip">
+          <div className="max-w-7xl mx-auto px-6 py-3 flex flex-wrap items-center justify-between gap-4 text-xs sm:text-sm">
+            <Stat label="Seller payout" value="80%" />
+            <span className="text-base-content/30 hidden sm:inline">·</span>
+            <Stat label="Burned" value="10%" tone="text-warning" />
+            <span className="text-base-content/30 hidden sm:inline">·</span>
+            <Stat label="Ecosystem treasury" value="10%" tone="text-secondary" />
+            <span className="text-base-content/30 hidden sm:inline">·</span>
+            <Stat label="Delivery window" value="7 days" />
+            <span className="text-base-content/30 hidden sm:inline">·</span>
+            <Stat label="Auto-refund on dispute" value="14 days" />
+          </div>
+        </div>
+      </section>
+
+      {/* Listings */}
+      <section id="listings" className="max-w-7xl mx-auto w-full px-6 py-12">
+        <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Active listings</h2>
+            <p className="text-sm text-base-content/60">Live offers from CLAWD-native sellers.</p>
+          </div>
+        </div>
+        <ListingsGrid />
+      </section>
+    </div>
   );
 };
+
+const Stat = ({ label, value, tone = "text-primary" }: { label: string; value: string; tone?: string }) => (
+  <span className="inline-flex items-baseline gap-2">
+    <span className={`font-semibold ${tone}`}>{value}</span>
+    <span className="text-base-content/60 uppercase tracking-wider text-[11px]">{label}</span>
+  </span>
+);
 
 export default Home;

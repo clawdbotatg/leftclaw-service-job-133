@@ -42,13 +42,27 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
     setMounted(true);
   }, []);
 
+  // Avoid initializing wagmi/RainbowKit during the static prerender pass.
+  // Some downstream connector code throws on `Cannot read properties of
+  // undefined (reading 'data')` when there's no real browser context. Once
+  // the client mounts, the full provider tree renders.
+  // Skip the entire app tree during prerender / before client mount.
+  // Pages call wagmi/scaffold hooks that require the WagmiProvider to be
+  // present, so we avoid rendering them at all on the server side. Without
+  // this guard, static export tries to invoke `useConfig` outside a provider
+  // and aborts the build.
+  if (!mounted) {
+    return (
+      <div className="flex flex-col min-h-screen bg-base-100">
+        <div className="flex-1" aria-hidden />
+      </div>
+    );
+  }
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          avatar={BlockieAvatar}
-          theme={mounted ? (isDarkMode ? darkTheme() : lightTheme()) : lightTheme()}
-        >
+        <RainbowKitProvider avatar={BlockieAvatar} theme={isDarkMode ? darkTheme() : lightTheme()}>
           <ProgressBar height="3px" color="#2299dd" />
           <ScaffoldEthApp>{children}</ScaffoldEthApp>
         </RainbowKitProvider>
