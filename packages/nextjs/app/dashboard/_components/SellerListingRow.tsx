@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldWriteContract, useWriteAndOpen } from "~~/hooks/scaffold-eth";
 import { formatClawd } from "~~/utils/clawdworks";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -20,12 +20,13 @@ type Listing = {
 
 export const SellerListingRow = ({ listing }: { listing: Listing }) => {
   const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "ClawdWorks" });
+  const { writeAndOpen } = useWriteAndOpen();
   const [submitting, setSubmitting] = useState(false);
 
   const onDeactivate = async () => {
     setSubmitting(true);
     try {
-      await writeContractAsync({ functionName: "deactivateListing", args: [listing.id] });
+      await writeAndOpen(() => writeContractAsync({ functionName: "deactivateListing", args: [listing.id] }));
       notification.success("Listing deactivated.");
     } catch (err: any) {
       notification.error(err?.shortMessage || err?.message || "Failed to deactivate");

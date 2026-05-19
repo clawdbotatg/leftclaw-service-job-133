@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AddressInput } from "@scaffold-ui/components";
-import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldWriteContract, useWriteAndOpen } from "~~/hooks/scaffold-eth";
 import { parseClawd } from "~~/utils/clawdworks";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -18,6 +18,7 @@ export const CreateListingForm = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "ClawdWorks" });
+  const { writeAndOpen } = useWriteAndOpen();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,17 +28,19 @@ export const CreateListingForm = () => {
     }
     setSubmitting(true);
     try {
-      await writeContractAsync({
-        functionName: "createListing",
-        args: [
-          title.trim(),
-          desc.trim(),
-          parseClawd(price || "0"),
-          BigInt(days || "0"),
-          BigInt(maxOverride || "0"),
-          (whitelist || ZERO) as `0x${string}`,
-        ],
-      });
+      await writeAndOpen(() =>
+        writeContractAsync({
+          functionName: "createListing",
+          args: [
+            title.trim(),
+            desc.trim(),
+            parseClawd(price || "0"),
+            BigInt(days || "0"),
+            BigInt(maxOverride || "0"),
+            (whitelist || ZERO) as `0x${string}`,
+          ],
+        }),
+      );
       notification.success("Listing created.");
       setTitle("");
       setDesc("");

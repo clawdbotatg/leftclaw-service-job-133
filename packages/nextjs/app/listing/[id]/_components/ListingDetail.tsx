@@ -6,8 +6,13 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Address } from "@scaffold-ui/components";
 import { base } from "viem/chains";
 import { useAccount, useSwitchChain } from "wagmi";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { formatClawd, shortHash } from "~~/utils/clawdworks";
+import {
+  useClawdUsdPrice,
+  useScaffoldReadContract,
+  useScaffoldWriteContract,
+  useWriteAndOpen,
+} from "~~/hooks/scaffold-eth";
+import { formatClawd, formatUsdFromClawd, shortHash } from "~~/utils/clawdworks";
 import { notification } from "~~/utils/scaffold-eth";
 
 const BUYER_NOTE_PLACEHOLDER = "QmPlaceholder";
@@ -71,6 +76,8 @@ export const ListingDetail = ({ paramsPromise }: { paramsPromise: Promise<{ id: 
   const { writeContractAsync: writeClawd, isPending: clawdPending } = useScaffoldWriteContract({
     contractName: "CLAWD",
   });
+  const { writeAndOpen } = useWriteAndOpen();
+  const usdPerClawd = useClawdUsdPrice();
 
   const price = listing?.priceCLAWD ?? 0n;
   const allowance = (clawdAllowance as bigint | undefined) ?? 0n;
@@ -93,10 +100,12 @@ export const ListingDetail = ({ paramsPromise }: { paramsPromise: Promise<{ id: 
     if (approvalSubmitting || approvalCooldown) return;
     setApprovalSubmitting(true);
     try {
-      await writeClawd({
-        functionName: "approve",
-        args: [CLAWDWORKS_ADDRESS, price],
-      });
+      await writeAndOpen(() =>
+        writeClawd({
+          functionName: "approve",
+          args: [CLAWDWORKS_ADDRESS, price],
+        }),
+      );
       notification.success("CLAWD approval submitted");
       setApprovalCooldown(true);
       await refetchAllowance();
@@ -112,10 +121,12 @@ export const ListingDetail = ({ paramsPromise }: { paramsPromise: Promise<{ id: 
     setPurchasing(true);
     try {
       const buyerNote = note.trim() ? note.trim() : BUYER_NOTE_PLACEHOLDER;
-      await writeClawdWorks({
-        functionName: "purchase",
-        args: [listingId, buyerNote],
-      });
+      await writeAndOpen(() =>
+        writeClawdWorks({
+          functionName: "purchase",
+          args: [listingId, buyerNote],
+        }),
+      );
       notification.success("Purchase complete. Job opened in escrow.");
       setNote("");
       await refetchAllowance();
@@ -280,7 +291,12 @@ export const ListingDetail = ({ paramsPromise }: { paramsPromise: Promise<{ id: 
               <p className="text-[10px] uppercase tracking-widest text-base-content/50">Price</p>
               <p className="text-3xl font-bold text-primary">{formatClawd(price, { withSymbol: false })}</p>
             </div>
-            <p className="text-xs text-right -mt-2 text-base-content/60">CLAWD</p>
+            <p className="text-xs text-right -mt-2 text-base-content/60">
+              CLAWD
+              {formatUsdFromClawd(price, usdPerClawd) && (
+                <span className="ml-1.5 text-base-content/50">{formatUsdFromClawd(price, usdPerClawd)}</span>
+              )}
+            </p>
 
             <div className="cw-divider" />
 

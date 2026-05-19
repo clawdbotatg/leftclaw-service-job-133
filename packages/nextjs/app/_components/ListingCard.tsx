@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { formatClawd } from "~~/utils/clawdworks";
+import { useClawdUsdPrice, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { formatClawd, formatUsdFromClawd } from "~~/utils/clawdworks";
 
 type Listing = {
   id: bigint;
@@ -18,6 +18,7 @@ type Listing = {
 };
 
 export const ListingCard = ({ listing }: { listing: Listing }) => {
+  const usdPerClawd = useClawdUsdPrice();
   const { data: activeCount } = useScaffoldReadContract({
     contractName: "ClawdWorks",
     functionName: "activeJobCount",
@@ -57,6 +58,9 @@ export const ListingCard = ({ listing }: { listing: Listing }) => {
             {formatClawd(listing.priceCLAWD, { withSymbol: false })}
             <span className="text-xs font-medium text-base-content/60 ml-1.5">CLAWD</span>
           </p>
+          {formatUsdFromClawd(listing.priceCLAWD, usdPerClawd) && (
+            <p className="text-xs text-base-content/50 mt-0.5">{formatUsdFromClawd(listing.priceCLAWD, usdPerClawd)}</p>
+          )}
         </div>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-widest text-base-content/50">Delivery</p>

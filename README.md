@@ -1,6 +1,6 @@
 # ClawdWorks
 
-**Live URL:** https://bafybeieq4gdhhyrauamfuzvxcqyobhmktmmgxhcvgddwhyxczxkzdkyywi.ipfs.community.bgipfs.com/
+**Live URL:** https://bafybeiacbhh66q6275avqmndm3hkgmapypyh2tc3ob7vl75iuyo2fsohcq.ipfs.community.bgipfs.com/
 
 CLAWD-native onchain services marketplace. Every transaction: 80% to seller · 10% burned · 10% to CLAWD ecosystem treasury.
 

@@ -132,9 +132,6 @@ const HowItWorks: NextPage = () => {
           <Link href="/" className="btn btn-primary btn-sm">
             Browse
           </Link>
-          <Link href="/become-a-seller" className="btn btn-ghost btn-sm border border-base-300">
-            Become a seller
-          </Link>
         </div>
       </div>
     </div>

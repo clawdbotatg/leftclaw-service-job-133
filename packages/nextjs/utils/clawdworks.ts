@@ -80,3 +80,19 @@ export function shortHash(s?: string): string {
   if (s.length <= 14) return s;
   return `${s.slice(0, 8)}…${s.slice(-4)}`;
 }
+
+/**
+ * Given a CLAWD amount (bigint, 18 decimals) and a USD price per CLAWD,
+ * returns a formatted "~$X.XX" string or null if price is unavailable.
+ */
+export function formatUsdFromClawd(amount: bigint | undefined, usdPerClawd: number | undefined): string | null {
+  if (amount === undefined || usdPerClawd === undefined || usdPerClawd === 0) return null;
+  const clawdNum = Number(formatUnits(amount, CLAWD_DECIMALS));
+  const usd = clawdNum * usdPerClawd;
+  if (!Number.isFinite(usd) || usd < 0) return null;
+  if (usd < 0.01) return "~<$0.01";
+  if (usd < 10) return `~$${usd.toFixed(2)}`;
+  if (usd < 1_000) return `~$${usd.toFixed(0)}`;
+  if (usd < 1_000_000) return `~$${(usd / 1_000).toFixed(1)}K`;
+  return `~$${(usd / 1_000_000).toFixed(2)}M`;
+}

@@ -13,3 +13,4 @@ export * from "./useTargetNetwork";
 export * from "./useTransactor";
 export * from "./useSelectedNetwork";
 export * from "./useWriteAndOpen";
+export * from "./useClawdUsdPrice";

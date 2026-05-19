@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Address } from "@scaffold-ui/components";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract, useScaffoldWriteContract, useWriteAndOpen } from "~~/hooks/scaffold-eth";
 import { JOB_STATUS, JOB_STATUS_LABEL, JOB_STATUS_TONE, formatClawd, shortHash } from "~~/utils/clawdworks";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -26,6 +26,7 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
     args: [job.listingId],
   });
   const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "ClawdWorks" });
+  const { writeAndOpen } = useWriteAndOpen();
   const [hash, setHash] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -36,7 +37,7 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
     }
     setSubmitting(true);
     try {
-      await writeContractAsync({ functionName: "markDelivered", args: [job.id, hash.trim()] });
+      await writeAndOpen(() => writeContractAsync({ functionName: "markDelivered", args: [job.id, hash.trim()] }));
       notification.success("Marked as delivered.");
       setHash("");
     } catch (err: any) {
@@ -49,7 +50,7 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
   const onRefund = async () => {
     setSubmitting(true);
     try {
-      await writeContractAsync({ functionName: "refundBuyer", args: [job.id] });
+      await writeAndOpen(() => writeContractAsync({ functionName: "refundBuyer", args: [job.id] }));
       notification.success("Buyer refunded.");
     } catch (err: any) {
       notification.error(err?.shortMessage || err?.message || "Failed to refund");
@@ -76,10 +77,12 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
     }
     setReviewSubmitting(true);
     try {
-      await writeContractAsync({
-        functionName: "submitSellerReview",
-        args: [job.id, reviewStars, reviewHash.trim()],
-      });
+      await writeAndOpen(() =>
+        writeContractAsync({
+          functionName: "submitSellerReview",
+          args: [job.id, reviewStars, reviewHash.trim()],
+        }),
+      );
       notification.success("Buyer review submitted.");
       setReviewHash("");
     } catch (err: any) {

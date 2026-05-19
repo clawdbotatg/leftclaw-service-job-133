@@ -1,8 +1,11 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { Address } from "@scaffold-ui/components";
 
-const CLAWDWORKS_ADDRESS = "0x90c14763fB2A372F186cBb3bFe8A1eD81f90623E";
-const CLAWD_ADDRESS = "0x9f86dB9fc6f7c9408e8Fda3Ff8ce4e78ac7a6b07";
+const CLAWDWORKS_ADDRESS = "0x90c14763fB2A372F186cBb3bFe8A1eD81f90623E" as const;
+const CLAWD_ADDRESS = "0x9f86dB9fc6f7c9408e8Fda3Ff8ce4e78ac7a6b07" as const;
 
 /**
  * Site footer
@@ -44,11 +47,6 @@ export const Footer = () => {
               </Link>
             </li>
             <li>
-              <Link href="/become-a-seller" className="link link-hover">
-                Become a seller
-              </Link>
-            </li>
-            <li>
               <Link href="/jobs" className="link link-hover">
                 My jobs
               </Link>
@@ -58,26 +56,18 @@ export const Footer = () => {
 
         <div>
           <p className="text-xs uppercase tracking-widest text-base-content/50 mb-3">Onchain</p>
-          <ul className="space-y-2 text-sm">
-            <li>
-              <a
-                href={`https://basescan.org/address/${CLAWDWORKS_ADDRESS}`}
-                target="_blank"
-                rel="noreferrer"
-                className="link link-hover font-mono text-xs"
-              >
-                ClawdWorks: {CLAWDWORKS_ADDRESS.slice(0, 6)}…{CLAWDWORKS_ADDRESS.slice(-4)}
-              </a>
+          <ul className="space-y-2">
+            <li className="text-xs text-base-content/60">
+              <span className="block text-[10px] uppercase tracking-widest text-base-content/50 mb-0.5">
+                ClawdWorks
+              </span>
+              <Address address={CLAWDWORKS_ADDRESS} format="short" />
             </li>
-            <li>
-              <a
-                href={`https://basescan.org/token/${CLAWD_ADDRESS}`}
-                target="_blank"
-                rel="noreferrer"
-                className="link link-hover font-mono text-xs"
-              >
-                CLAWD token: {CLAWD_ADDRESS.slice(0, 6)}…{CLAWD_ADDRESS.slice(-4)}
-              </a>
+            <li className="text-xs text-base-content/60">
+              <span className="block text-[10px] uppercase tracking-widest text-base-content/50 mb-0.5">
+                CLAWD token
+              </span>
+              <Address address={CLAWD_ADDRESS} format="short" />
             </li>
             <li className="text-xs text-base-content/50 pt-2">Built on Base.</li>
           </ul>

@@ -13,11 +13,15 @@ export type ScaffoldConfig = BaseConfig;
 
 export const DEFAULT_ALCHEMY_API_KEY = "cR4WnXePioePZ5fFrnSiR";
 
+const alchemyApiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || DEFAULT_ALCHEMY_API_KEY;
+
 const scaffoldConfig = {
   targetNetworks: [chains.base],
   pollingInterval: 3000,
-  alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || DEFAULT_ALCHEMY_API_KEY,
-  rpcOverrides: {},
+  alchemyApiKey: alchemyApiKey,
+  rpcOverrides: {
+    [chains.base.id]: `https://base-mainnet.g.alchemy.com/v2/${alchemyApiKey}`,
+  },
   walletConnectProjectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "3a8170812b534d0ff9d794f19a901d64",
   burnerWalletMode: "localNetworksOnly",
 } as const satisfies ScaffoldConfig;
