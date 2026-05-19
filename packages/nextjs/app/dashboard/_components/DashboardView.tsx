@@ -15,10 +15,6 @@ export const DashboardView = () => {
   const { address } = useAccount();
   const [tab, setTab] = useState<Tab>("overview");
 
-  const { data: owner } = useScaffoldReadContract({
-    contractName: "ClawdWorks",
-    functionName: "owner",
-  });
   const { data: listingCount } = useScaffoldReadContract({
     contractName: "ClawdWorks",
     functionName: "listingCount",
@@ -63,23 +59,20 @@ export const DashboardView = () => {
     return (allListings as readonly any[]).filter(l => l.seller?.toLowerCase() === address.toLowerCase());
   }, [allListings, address]);
 
-  const { totalEarnedEstimate, completedCount, deliveredCount, paidCount, disputedCount } = useMemo(() => {
+  const { totalEarnedEstimate, completedCount, deliveredCount, paidCount } = useMemo(() => {
     let total = 0n;
     let completed = 0;
     let delivered = 0;
     let paid = 0;
-    let disputed = 0;
     if (sellerJobs) {
       for (const j of sellerJobs as readonly any[]) {
         const status = Number(j.status);
         if (status === JOB_STATUS.COMPLETED) {
           completed += 1;
-          // Seller gets 80% of amountPaid
           total += (j.amountPaid * 8000n) / 10000n;
         }
         if (status === JOB_STATUS.DELIVERED) delivered += 1;
         if (status === JOB_STATUS.PAID) paid += 1;
-        if (status === JOB_STATUS.DISPUTED) disputed += 1;
       }
     }
     return {
@@ -87,7 +80,6 @@ export const DashboardView = () => {
       completedCount: completed,
       deliveredCount: delivered,
       paidCount: paid,
-      disputedCount: disputed,
     };
   }, [sellerJobs]);
 
@@ -95,7 +87,7 @@ export const DashboardView = () => {
     return (
       <div className="cw-card p-10 text-center">
         <h2 className="text-lg font-semibold">Connect your wallet</h2>
-        <p className="text-sm text-base-content/60 mt-2 mb-6">Sellers manage their listings here.</p>
+        <p className="text-sm text-base-content/60 mt-2 mb-6">Sellers manage their listings and jobs here.</p>
         <ConnectButton.Custom>
           {({ openConnectModal }) => (
             <button onClick={openConnectModal} className="btn btn-primary">
@@ -103,22 +95,6 @@ export const DashboardView = () => {
             </button>
           )}
         </ConnectButton.Custom>
-      </div>
-    );
-  }
-
-  const isOwner = owner && address && (owner as string).toLowerCase() === address.toLowerCase();
-
-  if (!isOwner) {
-    return (
-      <div className="cw-card p-10 text-center">
-        <h2 className="text-lg font-semibold">Seller-only</h2>
-        <p className="text-sm text-base-content/60 mt-2">
-          The dashboard is gated to the contract owner. Want to sell on ClawdWorks?
-        </p>
-        <a href="/become-a-seller" className="btn btn-primary mt-6">
-          Become a seller
-        </a>
       </div>
     );
   }
@@ -153,7 +129,6 @@ export const DashboardView = () => {
           <Stat label="Completed jobs" value={completedCount.toString()} />
           <Stat label="Awaiting confirm" value={deliveredCount.toString()} />
           <Stat label="In escrow (paid)" value={paidCount.toString()} />
-          <Stat label="Disputed" value={disputedCount.toString()} />
         </div>
       )}
 

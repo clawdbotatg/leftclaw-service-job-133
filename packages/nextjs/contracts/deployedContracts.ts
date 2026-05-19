@@ -17,11 +17,6 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
-            {
-              name: "initialOwner",
-              type: "address",
-              internalType: "address",
-            },
           ],
           stateMutability: "nonpayable",
         },
@@ -92,7 +87,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "DISPUTE_AUTO_REFUND",
+          name: "SELLER_BPS",
           inputs: [],
           outputs: [
             {
@@ -105,13 +100,13 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "SELLER_BPS",
+          name: "TREASURY",
           inputs: [],
           outputs: [
             {
               name: "",
-              type: "uint256",
-              internalType: "uint256",
+              type: "address",
+              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -128,26 +123,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "TREASURY_TIMELOCK",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "acceptOwnership",
-          inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -170,7 +145,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "claimDisputeRefund",
+          name: "cancelJob",
           inputs: [
             {
               name: "jobId",
@@ -230,7 +205,7 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "descIpfsHash",
+              name: "description",
               type: "string",
               internalType: "string",
             },
@@ -274,31 +249,6 @@ const deployedContracts = {
               internalType: "uint256",
             },
           ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "disputeJob",
-          inputs: [
-            {
-              name: "jobId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "reasonIpfsHash",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "executeTreasuryChange",
-          inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
         },
@@ -378,21 +328,6 @@ const deployedContracts = {
                   internalType: "uint256",
                 },
                 {
-                  name: "disputedAt",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "disputeReasonIpfsHash",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
-                  name: "disputeResolutionIpfsHash",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
                   name: "status",
                   type: "uint8",
                   internalType: "enum ClawdWorks.JobStatus",
@@ -457,21 +392,6 @@ const deployedContracts = {
                   name: "deliveredAt",
                   type: "uint256",
                   internalType: "uint256",
-                },
-                {
-                  name: "disputedAt",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "disputeReasonIpfsHash",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
-                  name: "disputeResolutionIpfsHash",
-                  type: "string",
-                  internalType: "string",
                 },
                 {
                   name: "status",
@@ -540,21 +460,6 @@ const deployedContracts = {
                   internalType: "uint256",
                 },
                 {
-                  name: "disputedAt",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "disputeReasonIpfsHash",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
-                  name: "disputeResolutionIpfsHash",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
                   name: "status",
                   type: "uint8",
                   internalType: "enum ClawdWorks.JobStatus",
@@ -596,7 +501,7 @@ const deployedContracts = {
                   internalType: "string",
                 },
                 {
-                  name: "descriptionIpfsHash",
+                  name: "description",
                   type: "string",
                   internalType: "string",
                 },
@@ -662,7 +567,7 @@ const deployedContracts = {
                   internalType: "string",
                 },
                 {
-                  name: "descriptionIpfsHash",
+                  name: "description",
                   type: "string",
                   internalType: "string",
                 },
@@ -906,6 +811,52 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getSellerReview",
+          inputs: [
+            {
+              name: "id",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "tuple",
+              internalType: "struct ClawdWorks.SellerReview",
+              components: [
+                {
+                  name: "id",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "jobId",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "stars",
+                  type: "uint8",
+                  internalType: "uint8",
+                },
+                {
+                  name: "reviewIpfsHash",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "timestamp",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "hasExpressedInterest",
           inputs: [
             {
@@ -988,21 +939,6 @@ const deployedContracts = {
               internalType: "uint256",
             },
             {
-              name: "disputedAt",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "disputeReasonIpfsHash",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "disputeResolutionIpfsHash",
-              type: "string",
-              internalType: "string",
-            },
-            {
               name: "status",
               type: "uint8",
               internalType: "enum ClawdWorks.JobStatus",
@@ -1050,7 +986,7 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "descriptionIpfsHash",
+              name: "description",
               type: "string",
               internalType: "string",
             },
@@ -1121,104 +1057,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "openMarketplace",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "owner",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "pause",
-          inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "paused",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "pendingOwner",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "pendingTreasury",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "pendingTreasuryAt",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "proposeTreasuryChange",
-          inputs: [
-            {
-              name: "newTreasury",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "purchase",
           inputs: [
             {
@@ -1243,29 +1081,12 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "renounceOwnership",
-          inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "resolveDispute",
+          name: "refundBuyer",
           inputs: [
             {
               name: "jobId",
               type: "uint256",
               internalType: "uint256",
-            },
-            {
-              name: "refundBuyer",
-              type: "bool",
-              internalType: "bool",
-            },
-            {
-              name: "resolutionIpfsHash",
-              type: "string",
-              internalType: "string",
             },
           ],
           outputs: [],
@@ -1438,25 +1259,83 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "sellerReviewByJob",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "sellerReviewCount",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "sellerReviews",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "id",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "jobId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "stars",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "reviewIpfsHash",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "timestamp",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "setMaxActiveJobs",
           inputs: [
             {
               name: "cap",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setOpenMarketplace",
-          inputs: [
-            {
-              name: "open",
-              type: "bool",
-              internalType: "bool",
             },
           ],
           outputs: [],
@@ -1493,35 +1372,31 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "transferOwnership",
+          name: "submitSellerReview",
           inputs: [
             {
-              name: "newOwner",
-              type: "address",
-              internalType: "address",
+              name: "jobId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "stars",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "reviewIpfsHash",
+              type: "string",
+              internalType: "string",
             },
           ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "treasury",
-          inputs: [],
           outputs: [
             {
               name: "",
-              type: "address",
-              internalType: "address",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "unpause",
-          inputs: [],
-          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -1539,7 +1414,7 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "descIpfsHash",
+              name: "description",
               type: "string",
               internalType: "string",
             },
@@ -1569,7 +1444,7 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "JobAutoRefunded",
+          name: "JobCancelled",
           inputs: [
             {
               name: "jobId",
@@ -1605,31 +1480,6 @@ const deployedContracts = {
             },
             {
               name: "deliverableIpfsHash",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "JobDisputed",
-          inputs: [
-            {
-              name: "jobId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "buyer",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-            {
-              name: "reasonIpfsHash",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -1683,31 +1533,6 @@ const deployedContracts = {
               type: "uint256",
               indexed: true,
               internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "JobResolved",
-          inputs: [
-            {
-              name: "jobId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "refundedBuyer",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
-            },
-            {
-              name: "resolutionIpfsHash",
-              type: "string",
-              indexed: false,
-              internalType: "string",
             },
           ],
           anonymous: false,
@@ -1784,19 +1609,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "MarketplaceOpenChanged",
-          inputs: [
-            {
-              name: "open",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "MaxActiveJobsSet",
           inputs: [
             {
@@ -1812,50 +1624,6 @@ const deployedContracts = {
               internalType: "uint256",
             },
           ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "OwnershipTransferStarted",
-          inputs: [
-            {
-              name: "previousOwner",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "newOwner",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "OwnershipTransferred",
-          inputs: [
-            {
-              name: "previousOwner",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "newOwner",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "Paused",
-          inputs: [],
           anonymous: false,
         },
         {
@@ -1948,63 +1716,28 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "TreasuryChangeProposed",
+          name: "SellerReviewSubmitted",
           inputs: [
             {
-              name: "newTreasury",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "executeAt",
+              name: "sellerReviewId",
               type: "uint256",
-              indexed: false,
+              indexed: true,
               internalType: "uint256",
             },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "TreasuryChanged",
-          inputs: [
             {
-              name: "newTreasury",
-              type: "address",
+              name: "jobId",
+              type: "uint256",
               indexed: true,
-              internalType: "address",
+              internalType: "uint256",
+            },
+            {
+              name: "stars",
+              type: "uint8",
+              indexed: false,
+              internalType: "uint8",
             },
           ],
           anonymous: false,
-        },
-        {
-          type: "event",
-          name: "Unpaused",
-          inputs: [],
-          anonymous: false,
-        },
-        {
-          type: "error",
-          name: "OwnableInvalidOwner",
-          inputs: [
-            {
-              name: "owner",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "OwnableUnauthorizedAccount",
-          inputs: [
-            {
-              name: "account",
-              type: "address",
-              internalType: "address",
-            },
-          ],
         },
         {
           type: "error",

@@ -7,13 +7,12 @@ import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { JOB_STATUS } from "~~/utils/clawdworks";
 
-type Tab = "active" | "delivered" | "completed" | "disputed" | "refunded";
+type Tab = "active" | "delivered" | "completed" | "refunded";
 
 const TABS: { id: Tab; label: string; statuses: number[] }[] = [
   { id: "active", label: "Active", statuses: [JOB_STATUS.PAID] },
   { id: "delivered", label: "Delivered", statuses: [JOB_STATUS.DELIVERED] },
   { id: "completed", label: "Completed", statuses: [JOB_STATUS.COMPLETED] },
-  { id: "disputed", label: "Disputed", statuses: [JOB_STATUS.DISPUTED] },
   { id: "refunded", label: "Refunded", statuses: [JOB_STATUS.REFUNDED] },
 ];
 
@@ -33,7 +32,6 @@ export const JobsView = () => {
       active: 0,
       delivered: 0,
       completed: 0,
-      disputed: 0,
       refunded: 0,
     };
     if (!jobs) return out;

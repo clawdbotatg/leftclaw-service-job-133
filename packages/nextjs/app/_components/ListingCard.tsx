@@ -9,7 +9,7 @@ type Listing = {
   id: bigint;
   seller: `0x${string}`;
   title: string;
-  descriptionIpfsHash: string;
+  description: string;
   priceCLAWD: bigint;
   deliveryDaysEstimate: bigint;
   maxConcurrentOverride: bigint;

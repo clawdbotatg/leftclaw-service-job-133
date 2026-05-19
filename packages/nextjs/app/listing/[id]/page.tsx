@@ -1,4 +1,4 @@
-import { ListingDetail } from "./_components/ListingDetail";
+import { ListingDetailClient } from "./_components/ListingDetailClient";
 
 // Pre-render a generous range of listing IDs so the static export covers
 // every plausible listing without needing live blockchain reads at build time.
@@ -11,7 +11,7 @@ export function generateStaticParams() {
 type Params = { id: string };
 
 const Page = ({ params }: { params: Promise<Params> }) => {
-  return <ListingDetail paramsPromise={params} />;
+  return <ListingDetailClient paramsPromise={params} />;
 };
 
 export default Page;

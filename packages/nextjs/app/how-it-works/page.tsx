@@ -23,8 +23,8 @@ const HowItWorks: NextPage = () => {
           single transaction and opens an escrowed job.
         </Step>
         <Step n={3} title="Receive delivery">
-          The seller marks the job delivered with an IPFS hash pointing to your deliverable. You have 7 days to confirm
-          or open a dispute.
+          The seller marks the job delivered with a reference to your deliverable. You have 7 days to confirm receipt.
+          If you don&apos;t, the seller can claim funds via timeout.
         </Step>
       </Section>
 
@@ -37,17 +37,24 @@ const HowItWorks: NextPage = () => {
 
       <Section title="The 7-day window" idx="03">
         <p>
-          Once a seller marks a job delivered, the buyer has 7 days to either confirm receipt (releasing escrow) or open
-          a dispute. If the window elapses without action, the funds remain in escrow until one of the parties acts.
+          Once a seller marks a job delivered, the buyer has 7 days to confirm receipt (which releases escrow). If the
+          window elapses without confirmation, the seller can claim the funds via{" "}
+          <code className="bg-base-300 px-1 py-0.5 rounded text-xs">claimTimeout</code>.
         </p>
       </Section>
 
-      <Section title="Buyer protection & disputes" idx="04">
-        <p>
-          A dispute can be opened by the buyer at any time after delivery. The buyer attaches an IPFS hash describing
-          the issue. If the dispute is unresolved for <span className="text-primary font-medium">14 days</span>, the
-          buyer can pull an automatic refund.
-        </p>
+      <Section title="Buyer & seller protections" idx="04">
+        <Step n={1} title="Buyer cancel (before delivery)">
+          A buyer can cancel any job that has not been marked delivered yet. Funds return instantly — no escrow lock-in.
+        </Step>
+        <Step n={2} title="Seller refund anytime">
+          A seller can voluntarily refund the buyer at any point — whether the job is still in escrow or already
+          delivered. No admin needed. Useful if the work cannot be completed.
+        </Step>
+        <Step n={3} title="No disputes needed">
+          The contract is ownerless — there is no arbitrator. Parties resolve issues directly via cancel or voluntary
+          refund. This keeps the contract simple and trustless.
+        </Step>
       </Section>
 
       <Section title="Privacy & delivery" idx="05">
@@ -72,21 +79,45 @@ const HowItWorks: NextPage = () => {
 
       <Section title="FAQ" idx="07">
         <Faq q="Is this custodial?">
-          No. CLAWD goes from your wallet into the ClawdWorks escrow contract on Base. No third party can move it.
+          No. CLAWD goes from your wallet directly into the ClawdWorks escrow contract on Base. No third party can move
+          it. There is no admin, no owner, no upgrade key.
         </Faq>
-        <Faq q="Can a seller cancel a paid job?">
-          A delivered or paid job moves through escrow only via buyer confirmation, dispute, or auto-refund.
+        <Faq q="Who can sell on ClawdWorks?">
+          Anyone. The marketplace is fully open — connect your wallet, create a listing, and start selling. No approval
+          or whitelist required.
+        </Faq>
+        <Faq q="Can I cancel a job after paying?">
+          Yes — as long as the seller has not marked delivery yet, the buyer can cancel at any time and receive a full
+          refund. Once the seller marks delivery, you confirm or wait for the 7-day timeout.
+        </Faq>
+        <Faq q="What if the seller cannot complete the work?">
+          The seller can voluntarily refund the buyer at any point — before or after marking delivery. No admin or
+          dispute process needed. The refund goes back in full.
+        </Faq>
+        <Faq q="What happens after delivery — is there a dispute system?">
+          No formal dispute system. The contract is ownerless — no arbitrator exists. Buyer and seller resolve issues
+          directly: the buyer confirms receipt, or the seller refunds. The 7-day seller timeout is the final backstop if
+          the buyer goes silent.
+        </Faq>
+        <Faq q="Can I leave a review?">
+          Yes — both sides can leave a rating after a job completes. The buyer rates the seller, and the seller rates
+          the buyer. Each rating is one-shot and recorded permanently onchain.
+        </Faq>
+        <Faq q="What does the description field support?">
+          Plain text or an IPFS hash. Plain text is visible directly onchain — good for short descriptions. An IPFS hash
+          lets you link to richer content (markdown, images) stored offchain. Both are valid.
         </Faq>
         <Faq q="What chain is this on?">Base mainnet (chain id 8453).</Faq>
         <Faq q="Where are the contracts?">
-          The marketplace is at{" "}
+          The marketplace contract is fully immutable and ownerless — no admin can pause or modify it. Source is
+          available on{" "}
           <a
-            href="https://basescan.org/address/0x90c14763fb2a372f186cbb3bfe8a1ed81f90623e"
+            href="https://github.com/clawdbotatg/leftclaw-service-job-133"
             target="_blank"
             rel="noreferrer"
             className="link"
           >
-            0x90c1…623E
+            GitHub
           </a>
           .
         </Faq>

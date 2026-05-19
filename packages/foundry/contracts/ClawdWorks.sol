@@ -3,16 +3,14 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title ClawdWorks
- * @notice CLAWD-native onchain services marketplace with escrow, disputes,
- *         reviews, and a treasury timelock. Payments split 80/10/10 between
- *         seller / burn / treasury on completion.
+ * @notice Immutable, ownerless CLAWD-native services marketplace. Open to all sellers.
+ *         Payments split 80/10/10 between seller / burn / treasury on completion.
  */
-contract ClawdWorks is Ownable2Step, ReentrancyGuard {
+contract ClawdWorks is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // -------------------------------------------------------------------------
@@ -20,14 +18,14 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+    address public constant TREASURY = 0x90eF2A9211A3E7CE788561E5af54C76B0Fa3aEd0;
+
     uint256 public constant SELLER_BPS = 8000; // 80%
     uint256 public constant BURN_BPS = 1000; // 10%
     uint256 public constant TREASURY_BPS = 1000; // 10%
     uint256 public constant BPS_DENOMINATOR = 10_000;
 
     uint256 public constant DELIVERY_TIMEOUT = 7 days;
-    uint256 public constant DISPUTE_AUTO_REFUND = 14 days;
-    uint256 public constant TREASURY_TIMELOCK = 7 days;
 
     uint256 public constant DEFAULT_MAX_ACTIVE_JOBS = 5;
 
@@ -39,7 +37,6 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         PAID,
         DELIVERED,
         COMPLETED,
-        DISPUTED,
         REFUNDED
     }
 
@@ -47,7 +44,7 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         uint256 id;
         address seller;
         string title;
-        string descriptionIpfsHash;
+        string description; // plain text or IPFS hash
         uint256 priceCLAWD;
         uint256 deliveryDaysEstimate;
         uint256 maxConcurrentOverride; // 0 => use seller global cap
@@ -64,9 +61,6 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         string buyerNoteIpfsHash;
         string deliverableIpfsHash;
         uint256 deliveredAt;
-        uint256 disputedAt;
-        string disputeReasonIpfsHash;
-        string disputeResolutionIpfsHash;
         JobStatus status;
     }
 
@@ -76,6 +70,14 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         uint8 stars; // 1-5
         string reviewIpfsHash;
         string sellerResponseIpfsHash;
+        uint256 timestamp;
+    }
+
+    struct SellerReview {
+        uint256 id;
+        uint256 jobId;
+        uint8 stars; // 1-5
+        string reviewIpfsHash;
         uint256 timestamp;
     }
 
@@ -91,26 +93,22 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     // -------------------------------------------------------------------------
 
     IERC20 public immutable clawd;
-    address public treasury;
-
-    bool public openMarketplace;
-    bool public paused;
-
-    address public pendingTreasury;
-    uint256 public pendingTreasuryAt;
 
     uint256 public listingCount;
     uint256 public jobCount;
     uint256 public reviewCount;
+    uint256 public sellerReviewCount;
     uint256 public sellerInterestCount;
 
     mapping(address => uint256[]) public sellerListings;
     mapping(uint256 => Listing) public listings;
     mapping(uint256 => Job) public jobs;
     mapping(uint256 => Review) public reviews;
+    mapping(uint256 => SellerReview) public sellerReviews;
     mapping(uint256 => SellerInterest) public sellerInterestById;
 
     mapping(uint256 => uint256) public reviewByJob; // jobId => reviewId (0 = none)
+    mapping(uint256 => uint256) public sellerReviewByJob; // jobId => sellerReviewId (0 = none)
     mapping(address => uint256) public activeJobCount;
     mapping(address => uint256) public maxActiveJobs;
     mapping(address => bool) public hasExpressedInterest; // one pitch per address
@@ -129,59 +127,21 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     event JobCompleted(uint256 indexed jobId);
     event JobRefunded(uint256 indexed jobId);
     event JobTimeoutClaimed(uint256 indexed jobId);
-    event JobDisputed(uint256 indexed jobId, address buyer, string reasonIpfsHash);
-    event JobResolved(uint256 indexed jobId, bool refundedBuyer, string resolutionIpfsHash);
-    event JobAutoRefunded(uint256 indexed jobId);
+    event JobCancelled(uint256 indexed jobId);
     event ReviewSubmitted(uint256 indexed reviewId, uint256 indexed jobId, uint8 stars);
     event ReviewResponded(uint256 indexed reviewId);
+    event SellerReviewSubmitted(uint256 indexed sellerReviewId, uint256 indexed jobId, uint8 stars);
     event SellerInterestExpressed(uint256 indexed id, address indexed wallet);
     event Payout(uint256 indexed jobId, uint256 sellerAmount, uint256 burnAmount, uint256 treasuryAmount);
-    event TreasuryChangeProposed(address indexed newTreasury, uint256 executeAt);
-    event TreasuryChanged(address indexed newTreasury);
-    event MarketplaceOpenChanged(bool open);
-    event Paused();
-    event Unpaused();
     event MaxActiveJobsSet(address indexed seller, uint256 cap);
-
-    // -------------------------------------------------------------------------
-    // Modifiers
-    // -------------------------------------------------------------------------
-
-    modifier onlySeller() {
-        if (!openMarketplace) {
-            require(msg.sender == owner(), "not operator");
-        }
-        _;
-    }
-
-    modifier onlyListingSeller(uint256 listingId) {
-        require(listings[listingId].seller == msg.sender, "not seller");
-        _;
-    }
-
-    modifier onlyJobSeller(uint256 jobId) {
-        require(jobs[jobId].seller == msg.sender, "not seller");
-        _;
-    }
-
-    modifier onlyJobBuyer(uint256 jobId) {
-        require(jobs[jobId].buyer == msg.sender, "not buyer");
-        _;
-    }
-
-    modifier whenNotPaused() {
-        require(!paused, "paused");
-        _;
-    }
 
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
 
-    constructor(address _clawd, address initialOwner) Ownable(initialOwner) {
+    constructor(address _clawd) {
         require(_clawd != address(0), "clawd zero");
         clawd = IERC20(_clawd);
-        treasury = 0x90eF2A9211A3E7CE788561E5af54C76B0Fa3aEd0;
     }
 
     // -------------------------------------------------------------------------
@@ -190,12 +150,12 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
 
     function createListing(
         string calldata title,
-        string calldata descIpfsHash,
+        string calldata description,
         uint256 priceCLAWD,
         uint256 deliveryDays,
         uint256 maxConcurrentOverride,
         address whitelistedBuyer
-    ) external onlySeller returns (uint256) {
+    ) external returns (uint256) {
         require(bytes(title).length > 0, "title empty");
         require(priceCLAWD > 0, "price zero");
 
@@ -206,7 +166,7 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
             id: id,
             seller: msg.sender,
             title: title,
-            descriptionIpfsHash: descIpfsHash,
+            description: description,
             priceCLAWD: priceCLAWD,
             deliveryDaysEstimate: deliveryDays,
             maxConcurrentOverride: maxConcurrentOverride,
@@ -223,18 +183,19 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     function updateListing(
         uint256 id,
         string calldata title,
-        string calldata descIpfsHash,
+        string calldata description,
         uint256 priceCLAWD,
         uint256 deliveryDays,
         uint256 maxConcurrentOverride,
         address whitelistedBuyer
-    ) external onlyListingSeller(id) {
+    ) external {
+        require(listings[id].seller == msg.sender, "not seller");
         require(bytes(title).length > 0, "title empty");
         require(priceCLAWD > 0, "price zero");
 
         Listing storage l = listings[id];
         l.title = title;
-        l.descriptionIpfsHash = descIpfsHash;
+        l.description = description;
         l.priceCLAWD = priceCLAWD;
         l.deliveryDaysEstimate = deliveryDays;
         l.maxConcurrentOverride = maxConcurrentOverride;
@@ -243,7 +204,8 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         emit ListingUpdated(id);
     }
 
-    function deactivateListing(uint256 id) external onlyListingSeller(id) {
+    function deactivateListing(uint256 id) external {
+        require(listings[id].seller == msg.sender, "not seller");
         listings[id].active = false;
         emit ListingDeactivated(id);
     }
@@ -261,7 +223,6 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     function purchase(uint256 listingId, string calldata buyerNoteIpfsHash)
         external
         nonReentrant
-        whenNotPaused
         returns (uint256)
     {
         Listing memory l = listings[listingId];
@@ -292,9 +253,6 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
             buyerNoteIpfsHash: buyerNoteIpfsHash,
             deliverableIpfsHash: "",
             deliveredAt: 0,
-            disputedAt: 0,
-            disputeReasonIpfsHash: "",
-            disputeResolutionIpfsHash: "",
             status: JobStatus.PAID
         });
 
@@ -307,11 +265,19 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         return jobId;
     }
 
+    function cancelJob(uint256 jobId) external nonReentrant {
+        Job storage j = jobs[jobId];
+        require(j.buyer == msg.sender, "not buyer");
+        require(j.status == JobStatus.PAID, "not cancellable");
+        _refund(jobId);
+        emit JobCancelled(jobId);
+    }
+
     function markDelivered(uint256 jobId, string calldata deliverableIpfsHash)
         external
         nonReentrant
-        onlyJobSeller(jobId)
     {
+        require(jobs[jobId].seller == msg.sender, "not seller");
         Job storage j = jobs[jobId];
         require(j.status == JobStatus.PAID, "not paid");
         require(bytes(deliverableIpfsHash).length > 0, "hash empty");
@@ -323,76 +289,39 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         emit JobDelivered(jobId, deliverableIpfsHash);
     }
 
-    function confirmReceipt(uint256 jobId) external nonReentrant onlyJobBuyer(jobId) {
+    function confirmReceipt(uint256 jobId) external nonReentrant {
+        require(jobs[jobId].buyer == msg.sender, "not buyer");
         Job storage j = jobs[jobId];
         require(j.status == JobStatus.DELIVERED, "not delivered");
         _release(jobId);
         emit JobCompleted(jobId);
     }
 
-    function claimTimeout(uint256 jobId) external nonReentrant onlyJobSeller(jobId) {
+    function refundBuyer(uint256 jobId) external nonReentrant {
+        require(jobs[jobId].seller == msg.sender, "not seller");
+        Job storage j = jobs[jobId];
+        require(j.status == JobStatus.PAID || j.status == JobStatus.DELIVERED, "not refundable");
+        _refund(jobId);
+    }
+
+    function claimTimeout(uint256 jobId) external nonReentrant {
+        require(jobs[jobId].seller == msg.sender, "not seller");
         Job storage j = jobs[jobId];
         require(j.status == JobStatus.DELIVERED, "not delivered");
-        require(j.disputedAt == 0, "active dispute");
         require(block.timestamp >= j.deliveredAt + DELIVERY_TIMEOUT, "too soon");
         _release(jobId);
         emit JobTimeoutClaimed(jobId);
     }
 
     // -------------------------------------------------------------------------
-    // Disputes
-    // -------------------------------------------------------------------------
-
-    function disputeJob(uint256 jobId, string calldata reasonIpfsHash) external onlyJobBuyer(jobId) {
-        Job storage j = jobs[jobId];
-        require(j.status == JobStatus.DELIVERED, "not delivered");
-        require(block.timestamp <= j.deliveredAt + DELIVERY_TIMEOUT, "window closed");
-        require(bytes(reasonIpfsHash).length > 0, "reason empty");
-
-        j.disputedAt = block.timestamp;
-        j.disputeReasonIpfsHash = reasonIpfsHash;
-        j.status = JobStatus.DISPUTED;
-
-        emit JobDisputed(jobId, msg.sender, reasonIpfsHash);
-    }
-
-    function resolveDispute(uint256 jobId, bool refundBuyer, string calldata resolutionIpfsHash)
-        external
-        nonReentrant
-        onlyOwner
-    {
-        Job storage j = jobs[jobId];
-        require(j.status == JobStatus.DISPUTED, "not disputed");
-
-        j.disputeResolutionIpfsHash = resolutionIpfsHash;
-
-        if (refundBuyer) {
-            _refund(jobId);
-        } else {
-            _release(jobId);
-        }
-
-        emit JobResolved(jobId, refundBuyer, resolutionIpfsHash);
-    }
-
-    function claimDisputeRefund(uint256 jobId) external nonReentrant onlyJobBuyer(jobId) {
-        Job storage j = jobs[jobId];
-        require(j.status == JobStatus.DISPUTED, "not disputed");
-        require(bytes(j.disputeResolutionIpfsHash).length == 0, "resolved");
-        require(block.timestamp >= j.disputedAt + DISPUTE_AUTO_REFUND, "too soon");
-        _refund(jobId);
-        emit JobAutoRefunded(jobId);
-    }
-
-    // -------------------------------------------------------------------------
-    // Reviews
+    // Reviews (buyer rates seller)
     // -------------------------------------------------------------------------
 
     function submitReview(uint256 jobId, uint8 stars, string calldata reviewIpfsHash)
         external
-        onlyJobBuyer(jobId)
         returns (uint256)
     {
+        require(jobs[jobId].buyer == msg.sender, "not buyer");
         Job storage j = jobs[jobId];
         require(j.status == JobStatus.COMPLETED, "not completed");
         require(reviewByJob[jobId] == 0, "already reviewed");
@@ -420,13 +349,44 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     function respondToReview(uint256 reviewId, string calldata responseIpfsHash) external {
         Review storage r = reviews[reviewId];
         require(r.id != 0, "no review");
-        Job storage j = jobs[r.jobId];
-        require(j.seller == msg.sender, "not seller");
+        require(jobs[r.jobId].seller == msg.sender, "not seller");
         require(bytes(r.sellerResponseIpfsHash).length == 0, "already responded");
         require(bytes(responseIpfsHash).length > 0, "hash empty");
 
         r.sellerResponseIpfsHash = responseIpfsHash;
         emit ReviewResponded(reviewId);
+    }
+
+    // -------------------------------------------------------------------------
+    // Reviews (seller rates buyer)
+    // -------------------------------------------------------------------------
+
+    function submitSellerReview(uint256 jobId, uint8 stars, string calldata reviewIpfsHash)
+        external
+        returns (uint256)
+    {
+        require(jobs[jobId].seller == msg.sender, "not seller");
+        Job storage j = jobs[jobId];
+        require(j.status == JobStatus.COMPLETED, "not completed");
+        require(sellerReviewByJob[jobId] == 0, "already reviewed");
+        require(stars >= 1 && stars <= 5, "stars 1-5");
+        require(bytes(reviewIpfsHash).length > 0, "hash empty");
+
+        sellerReviewCount += 1;
+        uint256 id = sellerReviewCount;
+
+        sellerReviews[id] = SellerReview({
+            id: id,
+            jobId: jobId,
+            stars: stars,
+            reviewIpfsHash: reviewIpfsHash,
+            timestamp: block.timestamp
+        });
+
+        sellerReviewByJob[jobId] = id;
+
+        emit SellerReviewSubmitted(id, jobId, stars);
+        return id;
     }
 
     // -------------------------------------------------------------------------
@@ -453,41 +413,6 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
     }
 
     // -------------------------------------------------------------------------
-    // Admin
-    // -------------------------------------------------------------------------
-
-    function setOpenMarketplace(bool open) external onlyOwner {
-        openMarketplace = open;
-        emit MarketplaceOpenChanged(open);
-    }
-
-    function pause() external onlyOwner {
-        paused = true;
-        emit Paused();
-    }
-
-    function unpause() external onlyOwner {
-        paused = false;
-        emit Unpaused();
-    }
-
-    function proposeTreasuryChange(address newTreasury) external onlyOwner {
-        require(newTreasury != address(0), "zero");
-        pendingTreasury = newTreasury;
-        pendingTreasuryAt = block.timestamp;
-        emit TreasuryChangeProposed(newTreasury, block.timestamp + TREASURY_TIMELOCK);
-    }
-
-    function executeTreasuryChange() external onlyOwner {
-        require(pendingTreasury != address(0), "no pending");
-        require(block.timestamp >= pendingTreasuryAt + TREASURY_TIMELOCK, "timelock");
-        treasury = pendingTreasury;
-        emit TreasuryChanged(pendingTreasury);
-        pendingTreasury = address(0);
-        pendingTreasuryAt = 0;
-    }
-
-    // -------------------------------------------------------------------------
     // Internal: settlement
     // -------------------------------------------------------------------------
 
@@ -496,7 +421,7 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         uint256 amount = j.amountPaid;
         require(amount > 0, "zero amount");
         require(
-            j.status == JobStatus.PAID || j.status == JobStatus.DELIVERED || j.status == JobStatus.DISPUTED,
+            j.status == JobStatus.PAID || j.status == JobStatus.DELIVERED,
             "bad status"
         );
 
@@ -508,12 +433,12 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
 
         uint256 sellerAmount = (amount * SELLER_BPS) / BPS_DENOMINATOR;
         uint256 burnAmount = (amount * BURN_BPS) / BPS_DENOMINATOR;
-        uint256 treasuryAmount = amount - sellerAmount - burnAmount; // remainder mitigates rounding
+        uint256 treasuryAmount = amount - sellerAmount - burnAmount;
 
         // Interactions
         clawd.safeTransfer(j.seller, sellerAmount);
         clawd.safeTransfer(BURN_ADDRESS, burnAmount);
-        clawd.safeTransfer(treasury, treasuryAmount);
+        clawd.safeTransfer(TREASURY, treasuryAmount);
         emit Payout(jobId, sellerAmount, burnAmount, treasuryAmount);
     }
 
@@ -522,7 +447,7 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
         uint256 amount = j.amountPaid;
         require(amount > 0, "zero amount");
         require(
-            j.status == JobStatus.PAID || j.status == JobStatus.DELIVERED || j.status == JobStatus.DISPUTED,
+            j.status == JobStatus.PAID || j.status == JobStatus.DELIVERED,
             "bad status"
         );
 
@@ -551,6 +476,10 @@ contract ClawdWorks is Ownable2Step, ReentrancyGuard {
 
     function getReview(uint256 id) external view returns (Review memory) {
         return reviews[id];
+    }
+
+    function getSellerReview(uint256 id) external view returns (SellerReview memory) {
+        return sellerReviews[id];
     }
 
     function getSellerInterest(uint256 id) external view returns (SellerInterest memory) {

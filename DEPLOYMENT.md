@@ -1,8 +1,8 @@
 # Deployment
 
-**Live URL:** https://bafybeia4yperz3ttmicf2zromlwbgj54raw5hk6etyacoahliks7r5u5ze.ipfs.community.bgipfs.com/
-**CID:** bafybeia4yperz3ttmicf2zromlwbgj54raw5hk6etyacoahliks7r5u5ze
-**Deployed:** 2026-05-09
+**Live URL:** https://bafybeieq4gdhhyrauamfuzvxcqyobhmktmmgxhcvgddwhyxczxkzdkyywi.ipfs.community.bgipfs.com/
+**CID:** bafybeieq4gdhhyrauamfuzvxcqyobhmktmmgxhcvgddwhyxczxkzdkyywi
+**Deployed:** 2026-05-19
 
 Static export uploaded to BGIPFS. The CID is content-addressed: every byte of
 `packages/nextjs/out/` is included. To redeploy, rebuild and re-upload — a

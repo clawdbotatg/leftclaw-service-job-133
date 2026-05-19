@@ -15,9 +15,6 @@ type Job = {
   buyerNoteIpfsHash: string;
   deliverableIpfsHash: string;
   deliveredAt: bigint;
-  disputedAt: bigint;
-  disputeReasonIpfsHash: string;
-  disputeResolutionIpfsHash: string;
   status: number;
 };
 
@@ -34,7 +31,7 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
 
   const onDeliver = async () => {
     if (!hash.trim()) {
-      notification.error("Deliverable IPFS hash required");
+      notification.error("Deliverable hash or reference required");
       return;
     }
     setSubmitting(true);
@@ -46,6 +43,49 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
       notification.error(err?.shortMessage || err?.message || "Failed to mark delivered");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const onRefund = async () => {
+    setSubmitting(true);
+    try {
+      await writeContractAsync({ functionName: "refundBuyer", args: [job.id] });
+      notification.success("Buyer refunded.");
+    } catch (err: any) {
+      notification.error(err?.shortMessage || err?.message || "Failed to refund");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const { data: sellerReviewId } = useScaffoldReadContract({
+    contractName: "ClawdWorks",
+    functionName: "sellerReviewByJob",
+    args: [job.id],
+    query: { enabled: status === JOB_STATUS.COMPLETED },
+  });
+
+  const [reviewStars, setReviewStars] = useState(5);
+  const [reviewHash, setReviewHash] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  const onSubmitSellerReview = async () => {
+    if (!reviewHash.trim()) {
+      notification.error("Review content required");
+      return;
+    }
+    setReviewSubmitting(true);
+    try {
+      await writeContractAsync({
+        functionName: "submitSellerReview",
+        args: [job.id, reviewStars, reviewHash.trim()],
+      });
+      notification.success("Buyer review submitted.");
+      setReviewHash("");
+    } catch (err: any) {
+      notification.error(err?.shortMessage || err?.message || "Failed to submit review");
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -66,15 +106,7 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
           </div>
           {job.buyerNoteIpfsHash && (
             <p className="text-xs text-base-content/70 mt-2">
-              Buyer note:{" "}
-              <a
-                href={`https://ipfs.io/ipfs/${job.buyerNoteIpfsHash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="link font-mono"
-              >
-                {shortHash(job.buyerNoteIpfsHash)}
-              </a>
+              Buyer note: <span className="font-mono">{shortHash(job.buyerNoteIpfsHash)}</span>
             </p>
           )}
         </div>
@@ -82,12 +114,12 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
 
       {status === JOB_STATUS.PAID && (
         <div className="mt-4 p-4 rounded bg-base-300/40 border border-base-300">
-          <p className="text-sm font-medium">In escrow — deliver to release funds</p>
+          <p className="text-sm font-medium mb-2">In escrow — deliver to release funds</p>
           <div className="flex gap-2 mt-2 flex-wrap">
             <input
               value={hash}
               onChange={e => setHash(e.target.value)}
-              placeholder="Deliverable IPFS hash (Qm…)"
+              placeholder="IPFS hash or deliverable reference"
               className="input input-bordered input-sm bg-base-100 text-sm grow font-mono"
             />
             <button onClick={onDeliver} disabled={submitting || isPending} className="btn btn-primary btn-sm">
@@ -95,38 +127,75 @@ export const SellerJobCard = ({ job }: { job: Job }) => {
               Mark delivered
             </button>
           </div>
+          <div className="mt-3 pt-3 border-t border-base-300">
+            <button
+              onClick={onRefund}
+              disabled={submitting || isPending}
+              className="btn btn-ghost btn-sm border border-base-300 text-xs"
+            >
+              Refund buyer instead
+            </button>
+          </div>
         </div>
       )}
 
       {status === JOB_STATUS.DELIVERED && (
-        <div className="mt-4 p-3 rounded bg-warning/10 border border-warning/30 text-sm">
-          Awaiting buyer confirmation. Deliverable:{" "}
-          {job.deliverableIpfsHash ? (
-            <a
-              className="link font-mono"
-              href={`https://ipfs.io/ipfs/${job.deliverableIpfsHash}`}
-              target="_blank"
-              rel="noreferrer"
+        <div className="mt-4 p-4 rounded bg-warning/10 border border-warning/30">
+          <p className="text-sm font-medium">Awaiting buyer confirmation</p>
+          <p className="text-xs text-base-content/70 mt-0.5">
+            Deliverable:{" "}
+            {job.deliverableIpfsHash ? <span className="font-mono">{shortHash(job.deliverableIpfsHash)}</span> : "—"}
+          </p>
+          <div className="mt-3 pt-3 border-t border-warning/30">
+            <button
+              onClick={onRefund}
+              disabled={submitting || isPending}
+              className="btn btn-ghost btn-sm border border-base-300 text-xs"
             >
-              {shortHash(job.deliverableIpfsHash)}
-            </a>
-          ) : (
-            "—"
-          )}
+              {(submitting || isPending) && <span className="loading loading-spinner loading-sm" />}
+              Refund buyer
+            </button>
+          </div>
         </div>
       )}
 
-      {status === JOB_STATUS.DISPUTED && (
-        <div className="mt-4 p-3 rounded bg-error/10 border border-error/30 text-sm">
-          Buyer opened a dispute. Reason:{" "}
-          <a
-            className="link font-mono"
-            href={`https://ipfs.io/ipfs/${job.disputeReasonIpfsHash}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {shortHash(job.disputeReasonIpfsHash)}
-          </a>
+      {status === JOB_STATUS.COMPLETED && (
+        <div className="mt-4 p-3 rounded bg-success/10 border border-success/30">
+          {sellerReviewId && (sellerReviewId as bigint) > 0n ? (
+            <p className="text-sm text-success font-medium">Buyer review submitted.</p>
+          ) : (
+            <div>
+              <p className="text-sm font-medium mb-2">Rate this buyer</p>
+              <div className="flex items-center gap-2 mb-2">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setReviewStars(n)}
+                    className={`text-xl transition-colors ${n <= reviewStars ? "text-warning" : "text-base-content/30"}`}
+                  >
+                    ★
+                  </button>
+                ))}
+                <span className="text-xs text-base-content/60 ml-1">{reviewStars}/5</span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  value={reviewHash}
+                  onChange={e => setReviewHash(e.target.value)}
+                  placeholder="Review note or IPFS hash"
+                  className="input input-bordered input-sm bg-base-100 text-sm grow"
+                />
+                <button
+                  onClick={onSubmitSellerReview}
+                  disabled={reviewSubmitting || isPending}
+                  className="btn btn-success btn-sm"
+                >
+                  {(reviewSubmitting || isPending) && <span className="loading loading-spinner loading-sm" />}
+                  Rate buyer
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </article>

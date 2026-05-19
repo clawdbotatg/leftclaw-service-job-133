@@ -241,18 +241,22 @@ export const ListingDetail = ({ paramsPromise }: { paramsPromise: Promise<{ id: 
           <div className="cw-card p-6 lg:p-8">
             <h2 className="text-sm uppercase tracking-widest text-base-content/50 mb-3">Description</h2>
             <p className="text-base-content/80 whitespace-pre-wrap break-words">
-              {listing.descriptionIpfsHash ? (
-                <>
-                  Stored on IPFS:{" "}
-                  <a
-                    href={`https://ipfs.io/ipfs/${listing.descriptionIpfsHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="link font-mono text-sm"
-                  >
-                    {shortHash(listing.descriptionIpfsHash)}
-                  </a>
-                </>
+              {listing.description ? (
+                /^(Qm[1-9A-HJ-NP-Za-km-z]{44,}|bafy[a-z0-9]{50,})$/.test(listing.description) ? (
+                  <>
+                    Stored on IPFS:{" "}
+                    <a
+                      href={`https://ipfs.io/ipfs/${listing.description}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="link font-mono text-sm"
+                    >
+                      {shortHash(listing.description)}
+                    </a>
+                  </>
+                ) : (
+                  listing.description
+                )
               ) : (
                 <span className="text-base-content/50 italic">No description provided.</span>
               )}
@@ -307,7 +311,7 @@ export const ListingDetail = ({ paramsPromise }: { paramsPromise: Promise<{ id: 
 
             <div className="text-[11px] text-base-content/50 leading-relaxed">
               On purchase: 80% escrowed for the seller, 10% burned, 10% to the ecosystem treasury. 7-day delivery
-              window, with dispute and 14-day auto-refund protection.
+              window. Buyer can cancel before delivery; seller can refund anytime.
             </div>
           </div>
         </div>

@@ -16,7 +16,7 @@ const productionUrl = process.env.NEXT_PUBLIC_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : "https://leftclaw.services";
 
-const titleTemplate = "%s | ClawdWorks";
+const titleTemplate = "%s | leftclaw-feature-job-199";
 
 export const getMetadata = ({
   title,

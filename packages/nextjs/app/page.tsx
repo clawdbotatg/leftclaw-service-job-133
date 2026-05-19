@@ -52,7 +52,7 @@ const Home: NextPage = () => {
             <span className="text-base-content/30 hidden sm:inline">·</span>
             <Stat label="Delivery window" value="7 days" />
             <span className="text-base-content/30 hidden sm:inline">·</span>
-            <Stat label="Auto-refund on dispute" value="14 days" />
+            <Stat label="Fully ownerless" value="No admin" />
           </div>
         </div>
       </section>

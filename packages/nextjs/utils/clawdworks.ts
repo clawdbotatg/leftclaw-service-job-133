@@ -6,28 +6,24 @@ export const JOB_STATUS = {
   PAID: 0,
   DELIVERED: 1,
   COMPLETED: 2,
-  DISPUTED: 3,
-  REFUNDED: 4,
+  REFUNDED: 3,
 } as const;
 
 export const JOB_STATUS_LABEL: Record<number, string> = {
   0: "Paid",
   1: "Delivered",
   2: "Completed",
-  3: "Disputed",
-  4: "Refunded",
+  3: "Refunded",
 };
 
 export const JOB_STATUS_TONE: Record<number, string> = {
   0: "bg-info/15 text-info border-info/30",
   1: "bg-warning/15 text-warning border-warning/30",
   2: "bg-success/15 text-success border-success/30",
-  3: "bg-error/15 text-error border-error/30",
-  4: "bg-base-300 text-base-content/60 border-base-300",
+  3: "bg-base-300 text-base-content/60 border-base-300",
 };
 
 export const DELIVERY_TIMEOUT_DAYS = 7;
-export const DISPUTE_AUTO_REFUND_DAYS = 14;
 
 /**
  * Format a uint256 CLAWD amount (18 decimals) into a clean compact string

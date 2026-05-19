@@ -10,7 +10,7 @@ const ZERO = "0x0000000000000000000000000000000000000000" as const;
 
 export const CreateListingForm = () => {
   const [title, setTitle] = useState("");
-  const [descHash, setDescHash] = useState("");
+  const [desc, setDesc] = useState("");
   const [price, setPrice] = useState("");
   const [days, setDays] = useState("7");
   const [maxOverride, setMaxOverride] = useState("0");
@@ -31,7 +31,7 @@ export const CreateListingForm = () => {
         functionName: "createListing",
         args: [
           title.trim(),
-          descHash.trim() || "QmPlaceholder",
+          desc.trim(),
           parseClawd(price || "0"),
           BigInt(days || "0"),
           BigInt(maxOverride || "0"),
@@ -40,7 +40,7 @@ export const CreateListingForm = () => {
       });
       notification.success("Listing created.");
       setTitle("");
-      setDescHash("");
+      setDesc("");
       setPrice("");
       setDays("7");
       setMaxOverride("0");
@@ -65,13 +65,18 @@ export const CreateListingForm = () => {
         />
       </Field>
 
-      <Field label="Description IPFS hash">
-        <input
-          value={descHash}
-          onChange={e => setDescHash(e.target.value)}
-          className="input input-bordered w-full bg-base-100 text-sm font-mono"
-          placeholder="Qm…"
+      <Field label="Description">
+        <textarea
+          value={desc}
+          onChange={e => setDesc(e.target.value)}
+          rows={3}
+          className="textarea textarea-bordered w-full bg-base-100 text-sm"
+          placeholder="Plain text or an IPFS hash (Qm…)"
         />
+        <p className="text-[10px] text-base-content/50 mt-1">
+          <strong>Plain text</strong>: visible to anyone, no upload needed. <strong>IPFS hash</strong>: rich/formatted
+          content stored offchain.
+        </p>
       </Field>
 
       <div className="grid grid-cols-2 gap-3">

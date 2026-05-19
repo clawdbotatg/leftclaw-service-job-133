@@ -6,7 +6,6 @@ import { Address } from "@scaffold-ui/components";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import {
   DELIVERY_TIMEOUT_DAYS,
-  DISPUTE_AUTO_REFUND_DAYS,
   JOB_STATUS,
   JOB_STATUS_LABEL,
   JOB_STATUS_TONE,
@@ -25,9 +24,6 @@ type Job = {
   buyerNoteIpfsHash: string;
   deliverableIpfsHash: string;
   deliveredAt: bigint;
-  disputedAt: bigint;
-  disputeReasonIpfsHash: string;
-  disputeResolutionIpfsHash: string;
   status: number;
 };
 
@@ -53,13 +49,6 @@ export const BuyerJobCard = ({ job }: { job: Job }) => {
     return Number(job.deliveredAt) + DELIVERY_TIMEOUT_DAYS * 86_400;
   }, [job.deliveredAt]);
 
-  const refundUnlockAt = useMemo(() => {
-    if (!job.disputedAt || job.disputedAt === 0n) return null;
-    return Number(job.disputedAt) + DISPUTE_AUTO_REFUND_DAYS * 86_400;
-  }, [job.disputedAt]);
-
-  const [disputeReason, setDisputeReason] = useState("");
-  const [showDispute, setShowDispute] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const onConfirm = async () => {
@@ -74,18 +63,46 @@ export const BuyerJobCard = ({ job }: { job: Job }) => {
     }
   };
 
-  const onDispute = async () => {
+  const onCancel = async () => {
     setSubmitting(true);
     try {
-      const reason = disputeReason.trim() || "QmPlaceholder";
-      await writeContractAsync({ functionName: "disputeJob", args: [job.id, reason] });
-      notification.success("Dispute opened.");
-      setShowDispute(false);
-      setDisputeReason("");
+      await writeContractAsync({ functionName: "cancelJob", args: [job.id] });
+      notification.success("Job cancelled. Funds refunded.");
     } catch (err: any) {
-      notification.error(err?.shortMessage || err?.message || "Failed to open dispute");
+      notification.error(err?.shortMessage || err?.message || "Failed to cancel");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const { data: reviewId } = useScaffoldReadContract({
+    contractName: "ClawdWorks",
+    functionName: "reviewByJob",
+    args: [job.id],
+    query: { enabled: status === JOB_STATUS.COMPLETED },
+  });
+
+  const [reviewStars, setReviewStars] = useState(5);
+  const [reviewHash, setReviewHash] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  const onSubmitReview = async () => {
+    if (!reviewHash.trim()) {
+      notification.error("Review content (IPFS hash or text) required");
+      return;
+    }
+    setReviewSubmitting(true);
+    try {
+      await writeContractAsync({
+        functionName: "submitReview",
+        args: [job.id, reviewStars, reviewHash.trim()],
+      });
+      notification.success("Review submitted onchain.");
+      setReviewHash("");
+    } catch (err: any) {
+      notification.error(err?.shortMessage || err?.message || "Failed to submit review");
+    } finally {
+      setReviewSubmitting(false);
     }
   };
 
@@ -110,6 +127,25 @@ export const BuyerJobCard = ({ job }: { job: Job }) => {
         </Link>
       </div>
 
+      {status === JOB_STATUS.PAID && (
+        <div className="mt-4 p-4 rounded bg-info/10 border border-info/30">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-sm font-medium">In escrow — awaiting seller delivery</p>
+              <p className="text-xs text-base-content/70 mt-0.5">You can cancel before the seller marks delivery.</p>
+            </div>
+            <button
+              onClick={onCancel}
+              disabled={submitting || isPending}
+              className="btn btn-ghost btn-sm border border-base-300"
+            >
+              {(submitting || isPending) && <span className="loading loading-spinner loading-sm" />}
+              Cancel & refund
+            </button>
+          </div>
+        </div>
+      )}
+
       {status === JOB_STATUS.DELIVERED && deliveryDeadline && (
         <div className="mt-4 p-4 rounded bg-warning/10 border border-warning/30">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -132,68 +168,55 @@ export const BuyerJobCard = ({ job }: { job: Job }) => {
               </p>
               <p className="text-xs text-base-content/70 mt-0.5">
                 {formatRemaining(deliveryDeadline - now)
-                  ? `${formatRemaining(deliveryDeadline - now)} until auto-confirm`
-                  : "Auto-confirm window has elapsed"}
+                  ? `${formatRemaining(deliveryDeadline - now)} until auto-timeout`
+                  : "7-day window has elapsed — seller may claim timeout"}
               </p>
             </div>
-            <div className="flex gap-2">
-              <button onClick={onConfirm} disabled={submitting || isPending} className="btn btn-success btn-sm">
-                {(submitting || isPending) && <span className="loading loading-spinner loading-sm" />}
-                Confirm receipt
-              </button>
-              <button
-                onClick={() => setShowDispute(s => !s)}
-                disabled={submitting || isPending}
-                className="btn btn-ghost btn-sm border border-base-300"
-              >
-                Dispute
-              </button>
-            </div>
+            <button onClick={onConfirm} disabled={submitting || isPending} className="btn btn-success btn-sm">
+              {(submitting || isPending) && <span className="loading loading-spinner loading-sm" />}
+              Confirm receipt
+            </button>
           </div>
-          {showDispute && (
-            <div className="mt-3">
-              <textarea
-                value={disputeReason}
-                onChange={e => setDisputeReason(e.target.value)}
-                rows={3}
-                placeholder="Describe the issue (this is treated as an IPFS hash)…"
-                className="textarea textarea-bordered w-full text-sm bg-base-100"
-              />
-              <button onClick={onDispute} disabled={submitting || isPending} className="btn btn-error btn-sm mt-2">
-                {(submitting || isPending) && <span className="loading loading-spinner loading-sm" />}
-                Open dispute
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {status === JOB_STATUS.DISPUTED && refundUnlockAt && (
-        <div className="mt-4 p-4 rounded bg-error/10 border border-error/30">
-          <p className="text-sm font-medium">Disputed</p>
-          <p className="text-xs text-base-content/70 mt-1">
-            Reason:{" "}
-            <a
-              href={`https://ipfs.io/ipfs/${job.disputeReasonIpfsHash}`}
-              target="_blank"
-              rel="noreferrer"
-              className="link font-mono"
-            >
-              {shortHash(job.disputeReasonIpfsHash)}
-            </a>
-          </p>
-          <p className="text-xs text-base-content/70 mt-1">
-            {formatRemaining(refundUnlockAt - now)
-              ? `Auto-refund available in ${formatRemaining(refundUnlockAt - now)}`
-              : "Auto-refund is now available."}
-          </p>
         </div>
       )}
 
       {status === JOB_STATUS.COMPLETED && (
-        <div className="mt-4 p-3 rounded bg-success/10 border border-success/30 text-sm">
-          Completed. Want to leave a review? Reviews can be submitted onchain via{" "}
-          <code className="bg-base-300 px-1.5 py-0.5 rounded text-xs">submitReview()</code>.
+        <div className="mt-4 p-3 rounded bg-success/10 border border-success/30">
+          {reviewId && (reviewId as bigint) > 0n ? (
+            <p className="text-sm text-success font-medium">Review submitted. Thank you!</p>
+          ) : (
+            <div>
+              <p className="text-sm font-medium mb-2">Leave a review for this seller</p>
+              <div className="flex items-center gap-2 mb-2">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setReviewStars(n)}
+                    className={`text-xl transition-colors ${n <= reviewStars ? "text-warning" : "text-base-content/30"}`}
+                  >
+                    ★
+                  </button>
+                ))}
+                <span className="text-xs text-base-content/60 ml-1">{reviewStars}/5</span>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  value={reviewHash}
+                  onChange={e => setReviewHash(e.target.value)}
+                  placeholder="Review IPFS hash or short note"
+                  className="input input-bordered input-sm bg-base-100 text-sm grow"
+                />
+                <button
+                  onClick={onSubmitReview}
+                  disabled={reviewSubmitting || isPending}
+                  className="btn btn-success btn-sm"
+                >
+                  {(reviewSubmitting || isPending) && <span className="loading loading-spinner loading-sm" />}
+                  Submit review
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </article>
